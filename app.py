@@ -141,13 +141,6 @@ selected_types = st.sidebar.multiselect(
     "Transaction Type", options=all_types, default=all_types,
 )
 
-all_companies = sorted(trades["Instrument Name"].unique().tolist())
-selected_companies = st.sidebar.multiselect(
-    "Companies (type to search)",
-    options=all_companies, default=all_companies,
-    help="Click the box and start typing to filter.",
-)
-
 st.sidebar.markdown("---")
 log_y = st.sidebar.checkbox(
     "Symmetric-log Y axis", value=False,
@@ -157,6 +150,42 @@ clip_outliers = st.sidebar.checkbox(
     "Clip extreme outliers to ±500%", value=False,
     help="Caps performance below -100% or above +500% so the bulk is easier to read.",
 )
+
+# -------------------------------------------------------------------
+# Header
+# -------------------------------------------------------------------
+st.title("📊 LTGG Trade Performance Dashboard")
+
+if perf_mode == "End of selected date range":
+    sub = f"Performance measured from each trade date to **{end_date.strftime('%d %b %Y')}**."
+elif perf_mode == "Latest available price":
+    sub = f"Performance measured from each trade date to **{prices.index.max().strftime('%d %b %Y')}** (latest available)."
+else:
+    sub = f"Performance measured **{fixed_days} days** after each trade."
+st.markdown(sub)
+
+# -------------------------------------------------------------------
+# Company search + dropdown (main panel, prominent)
+# -------------------------------------------------------------------
+all_companies = sorted(trades["Instrument Name"].unique().tolist())
+
+c_search, c_pick = st.columns([1, 2])
+with c_search:
+    company_search = st.text_input(
+        "🔍 Search companies",
+        placeholder="e.g. Tesla, Alibaba…",
+    )
+with c_pick:
+    if company_search:
+        matching = [c for c in all_companies if company_search.lower() in c.lower()]
+    else:
+        matching = all_companies
+    selected_companies = st.multiselect(
+        f"Companies on chart ({len(matching)} match{'es' if len(matching) != 1 else ''})",
+        options=matching,
+        default=matching,
+        placeholder="Pick one or more, or leave to show all matches",
+    )
 
 # -------------------------------------------------------------------
 # Apply filters & compute performance
@@ -185,19 +214,17 @@ plot_data["Performance % (plot)"] = (
     plot_data["Performance %"].clip(-100, 500) if clip_outliers else plot_data["Performance %"]
 )
 
-# -------------------------------------------------------------------
-# Header & KPIs
-# -------------------------------------------------------------------
-st.title("📊 LTGG Trade Performance Dashboard")
+# Signed trade weight: sales become negative so the chart forms 4 quadrants
+SALE_TYPES = {"Partial Sale", "Complete Sale"}
+plot_data["Signed Weight"] = np.where(
+    plot_data["Transaction Type"].isin(SALE_TYPES),
+    -plot_data["% Portfolio Order"],
+    plot_data["% Portfolio Order"],
+)
 
-if perf_mode == "End of selected date range":
-    sub = f"Performance measured from each trade date to **{end_date.strftime('%d %b %Y')}**."
-elif perf_mode == "Latest available price":
-    sub = f"Performance measured from each trade date to **{prices.index.max().strftime('%d %b %Y')}** (latest available)."
-else:
-    sub = f"Performance measured **{fixed_days} days** after each trade."
-st.markdown(sub)
-
+# -------------------------------------------------------------------
+# KPIs
+# -------------------------------------------------------------------
 k1, k2, k3, k4, k5 = st.columns(5)
 k1.metric("Trades shown", f"{len(plot_data):,}")
 if len(plot_data):
@@ -225,7 +252,7 @@ if len(plot_data) == 0:
 else:
     fig = px.scatter(
         plot_data,
-        x="% Portfolio Order",
+        x="Signed Weight",
         y="Performance % (plot)",
         color="Transaction Type",
         color_discrete_map=COLOR_MAP,
@@ -245,11 +272,33 @@ else:
             "<extra></extra>"
         ),
     )
+    # Quadrant guide lines
     fig.add_hline(y=0, line_dash="dash", line_color="grey", opacity=0.5)
+    fig.add_vline(x=0, line_dash="dash", line_color="grey", opacity=0.5)
+
+    # Subtle quadrant labels (paper coordinates so they sit in the corners)
+    quadrant_font = dict(size=11, color="rgba(120,120,120,0.7)")
+    fig.add_annotation(xref="paper", yref="paper", x=0.99, y=0.98,
+                       text="Good buys<br>(bought, went up)",
+                       showarrow=False, align="right",
+                       font=quadrant_font, xanchor="right", yanchor="top")
+    fig.add_annotation(xref="paper", yref="paper", x=0.99, y=0.02,
+                       text="Poor buys<br>(bought, went down)",
+                       showarrow=False, align="right",
+                       font=quadrant_font, xanchor="right", yanchor="bottom")
+    fig.add_annotation(xref="paper", yref="paper", x=0.01, y=0.98,
+                       text="Premature sales<br>(sold, kept rising)",
+                       showarrow=False, align="left",
+                       font=quadrant_font, xanchor="left", yanchor="top")
+    fig.add_annotation(xref="paper", yref="paper", x=0.01, y=0.02,
+                       text="Avoided losses<br>(sold, then dropped)",
+                       showarrow=False, align="left",
+                       font=quadrant_font, xanchor="left", yanchor="bottom")
+
     fig.update_layout(
         height=620,
         hovermode="closest",
-        xaxis_title="Trade weight (% of portfolio)",
+        xaxis_title="Trade weight (% of portfolio) — buys positive, sales negative",
         yaxis_title="Performance (%)" + (" – clipped" if clip_outliers else ""),
         legend=dict(orientation="h", yanchor="bottom", y=1.02,
                     xanchor="right", x=1, title=None),
