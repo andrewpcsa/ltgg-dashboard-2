@@ -307,8 +307,21 @@ else:
     )
     fig.update_xaxes(showgrid=True, gridcolor="rgba(128,128,128,0.18)", zeroline=False)
     fig.update_yaxes(showgrid=True, gridcolor="rgba(128,128,128,0.18)", zeroline=False)
+
     if log_y:
+        # Log scale can't show negative values, so the symmetric-quadrant
+        # framing doesn't apply – fall back to default auto-range.
         fig.update_yaxes(type="log")
+    else:
+        # Symmetric axes around zero so all four quadrants are always
+        # visible at proportionate scale, regardless of where the data sits.
+        x_abs_max = plot_data["Signed Weight"].abs().max()
+        y_abs_max = plot_data["Performance % (plot)"].abs().max()
+        if pd.notna(x_abs_max) and x_abs_max > 0:
+            fig.update_xaxes(range=[-x_abs_max * 1.08, x_abs_max * 1.08])
+        if pd.notna(y_abs_max) and y_abs_max > 0:
+            fig.update_yaxes(range=[-y_abs_max * 1.08, y_abs_max * 1.08])
+
     st.plotly_chart(fig, use_container_width=True)
 
 # -------------------------------------------------------------------
