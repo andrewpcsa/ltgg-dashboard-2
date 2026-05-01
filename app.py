@@ -222,6 +222,7 @@ plot_data["Signed Weight"] = np.where(
     -plot_data["% Portfolio Order"],
     plot_data["% Portfolio Order"],
 )
+plot_data["Perf Display"] = plot_data["Performance %"].apply(lambda x: f"{x:+.0f}%")
 
 # -------------------------------------------------------------------
 # KPIs
@@ -259,7 +260,7 @@ else:
         color_discrete_map=COLOR_MAP,
         category_orders={"Transaction Type": ["New Buy", "Addition", "Partial Sale", "Complete Sale"]},
         custom_data=["Instrument Name", "Earliest Trade Date",
-                     "Transaction Type", "% Portfolio Order", "Performance %"],
+                     "Transaction Type", "% Portfolio Order", "Perf Display"],
     )
     fig.update_traces(
         marker=dict(size=11, opacity=0.78,
@@ -269,7 +270,7 @@ else:
             "Date: %{customdata[1]|%d %b %Y}<br>"
             "Type: %{customdata[2]}<br>"
             "Trade weight: %{customdata[3]:.2f}%<br>"
-            "Performance: %{customdata[4]:+.0f}%"
+            "Performance: %{customdata[4]}"
             "<extra></extra>"
         ),
     )
