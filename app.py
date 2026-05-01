@@ -296,18 +296,17 @@ else:
                        showarrow=False, align="left",
                        font=quadrant_font, xanchor="left", yanchor="bottom")
 
-    fig.update_layout(
+        fig.update_layout(
         height=620,
         hovermode="closest",
         xaxis_title="Trade weight (% of portfolio) — buys positive, sales negative",
         yaxis_title="Performance (%)" + (" – clipped" if clip_outliers else ""),
+        yaxis=dict(tickformat=".0f", hoverformat=".0f"),
         legend=dict(orientation="h", yanchor="bottom", y=1.02,
                     xanchor="right", x=1, title=None),
         margin=dict(l=10, r=10, t=40, b=10),
         plot_bgcolor="rgba(0,0,0,0)",
     )
-    fig.update_xaxes(showgrid=True, gridcolor="rgba(128,128,128,0.18)", zeroline=False)
-    fig.update_yaxes(showgrid=True, gridcolor="rgba(128,128,128,0.18)", zeroline=False, tickformat=".0f", hoverformat=".0f")
 
     if log_y:
         fig.update_yaxes(type="log")
