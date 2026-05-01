@@ -229,8 +229,8 @@ plot_data["Signed Weight"] = np.where(
 k1, k2, k3, k4, k5 = st.columns(5)
 k1.metric("Trades shown", f"{len(plot_data):,}")
 if len(plot_data):
-    k2.metric("Mean", f"{plot_data['Performance %'].mean():+.1f}%")
-    k3.metric("Median", f"{plot_data['Performance %'].median():+.1f}%")
+    k2.metric("Mean", f"{plot_data['Performance %'].mean():+.0f}%")
+    k3.metric("Median", f"{plot_data['Performance %'].median():+.0f}%")
     k4.metric("% positive", f"{(plot_data['Performance %'] > 0).mean()*100:.0f}%")
     k5.metric("Best / worst",
               f"{plot_data['Performance %'].max():+.0f}% / {plot_data['Performance %'].min():+.0f}%")
@@ -307,7 +307,7 @@ else:
         plot_bgcolor="rgba(0,0,0,0)",
     )
     fig.update_xaxes(showgrid=True, gridcolor="rgba(128,128,128,0.18)", zeroline=False)
-    fig.update_yaxes(showgrid=True, gridcolor="rgba(128,128,128,0.18)", zeroline=False)
+    fig.update_yaxes(showgrid=True, gridcolor="rgba(128,128,128,0.18)", zeroline=False, tickformat=".0f")
 
     if log_y:
         fig.update_yaxes(type="log")
