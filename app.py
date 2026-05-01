@@ -225,16 +225,48 @@ plot_data["Signed Weight"] = np.where(
 plot_data["Perf Display"] = plot_data["Performance %"].apply(lambda x: f"{x:+.0f}%")
 
 # -------------------------------------------------------------------
+# KPI styling
+# -------------------------------------------------------------------
+st.markdown("""
+<style>
+/* Shrink KPI labels */
+div[data-testid="stMetricLabel"] > label {
+    font-size: 0.85rem !important;
+}
+
+/* Shrink KPI values */
+div[data-testid="stMetricValue"] {
+    font-size: 1.7rem !important;
+}
+
+div[data-testid="stMetricValue"] > div {
+    font-size: inherit !important;
+}
+
+/* Reduce vertical padding around metrics */
+div[data-testid="stMetric"] {
+    padding-top: 0rem;
+    padding-bottom: 0rem;
+}
+</style>
+""", unsafe_allow_html=True)
+
+
+# -------------------------------------------------------------------
 # KPIs
 # -------------------------------------------------------------------
-k1, k2, k3, k4, k5 = st.columns(5)
+k1, k2, k3, k4, k5 = st.columns(5, gap="xxsmall")
+
 k1.metric("Trades shown", f"{len(plot_data):,}")
+
 if len(plot_data):
     k2.metric("Mean", f"{plot_data['Performance %'].mean():+.0f}%")
     k3.metric("Median", f"{plot_data['Performance %'].median():+.0f}%")
     k4.metric("% positive", f"{(plot_data['Performance %'] > 0).mean()*100:.0f}%")
-    k5.metric("Best / worst",
-              f"{plot_data['Performance %'].max():+.0f}% / {plot_data['Performance %'].min():+.0f}%")
+    k5.metric(
+        "Best / worst",
+        f"{plot_data['Performance %'].max():+.0f}% / {plot_data['Performance %'].min():+.0f}%"
+    )
 else:
     for k in (k2, k3, k4, k5):
         k.metric("—", "—")
