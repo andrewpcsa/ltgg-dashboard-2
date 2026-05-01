@@ -296,7 +296,7 @@ else:
                        showarrow=False, align="left",
                        font=quadrant_font, xanchor="left", yanchor="bottom")
 
-        fig.update_layout(
+    fig.update_layout(
         height=620,
         hovermode="closest",
         xaxis_title="Trade weight (% of portfolio) — buys positive, sales negative",
