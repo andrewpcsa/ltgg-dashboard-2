@@ -268,8 +268,8 @@ else:
             "<b>%{customdata[0]}</b><br>"
             "Date: %{customdata[1]|%d %b %Y}<br>"
             "Type: %{customdata[2]}<br>"
-            "Trade weight: %{customdata[3]:.3f}%<br>"
-            "Performance: %{customdata[4]:+.2f}%"
+            "Trade weight: %{customdata[3]:.2f}%<br>"
+            "Performance: %{customdata[4]:+.0f}%"
             "<extra></extra>"
         ),
     )
@@ -360,8 +360,8 @@ with st.expander("📋 View underlying trade data"):
             "% Portfolio Order", "Performance %"
         ]].copy()
         show["Earliest Trade Date"] = show["Earliest Trade Date"].dt.strftime("%Y-%m-%d")
-        show["% Portfolio Order"] = show["% Portfolio Order"].round(4)
-        show["Performance %"] = show["Performance %"].round(2)
+        show["% Portfolio Order"] = show["% Portfolio Order"].round(2)
+        show["Performance %"] = show["Performance %"].round(0)
         show = show.sort_values("Earliest Trade Date", ascending=False).reset_index(drop=True)
         st.dataframe(show, use_container_width=True, height=400)
 
