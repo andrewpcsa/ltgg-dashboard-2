@@ -242,19 +242,23 @@ plot_data["Signed Weight"] = np.where(
     plot_data["% Portfolio Order"],
 )
 
+# Pre-formatted performance string for hover (plotly's :.0f format spec
+# is unreliable; rendering a finished string sidesteps it entirely)
+plot_data["Perf Display"] = plot_data["Performance %"].apply(lambda x: f"{x:+.0f}%")
+
 # -------------------------------------------------------------------
 # KPIs
 # -------------------------------------------------------------------
-k1, k2, k3, k4, k5 = st.columns(5)
+k1, k2, k3, k4, k5, k6 = st.columns(6)
 k1.metric("Trades shown", f"{len(plot_data):,}")
 if len(plot_data):
-    k2.metric("Mean", f"{plot_data['Performance %'].mean():+.1f}%")
-    k3.metric("Median", f"{plot_data['Performance %'].median():+.1f}%")
+    k2.metric("Mean", f"{plot_data['Performance %'].mean():+.0f}%")
+    k3.metric("Median", f"{plot_data['Performance %'].median():+.0f}%")
     k4.metric("% positive", f"{(plot_data['Performance %'] > 0).mean()*100:.0f}%")
-    k5.metric("Best / worst",
-              f"{plot_data['Performance %'].max():+.0f}% / {plot_data['Performance %'].min():+.0f}%")
+    k5.metric("Best", f"{plot_data['Performance %'].max():+.0f}%")
+    k6.metric("Worst", f"{plot_data['Performance %'].min():+.0f}%")
 else:
-    for k in (k2, k3, k4, k5):
+    for k in (k2, k3, k4, k5, k6):
         k.metric("—", "—")
 
 # -------------------------------------------------------------------
@@ -278,7 +282,7 @@ else:
         color_discrete_map=COLOR_MAP,
         category_orders={"Transaction Type": ["New Buy", "Addition", "Partial Sale", "Complete Sale"]},
         custom_data=["Instrument Name", "Earliest Trade Date",
-                     "Transaction Type", "% Portfolio Order", "Performance %"],
+                     "Transaction Type", "% Portfolio Order", "Perf Display"],
     )
     fig.update_traces(
         marker=dict(size=11, opacity=0.78,
@@ -288,7 +292,7 @@ else:
             "Date: %{customdata[1]|%d %b %Y}<br>"
             "Type: %{customdata[2]}<br>"
             "Trade weight: %{customdata[3]:.2f}%<br>"
-            "Performance: %{customdata[4]:+.0f}%"
+            "Performance: %{customdata[4]}"
             "<extra></extra>"
         ),
     )
