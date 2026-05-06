@@ -247,19 +247,26 @@ plot_data["Signed Weight"] = np.where(
 plot_data["Perf Display"] = plot_data["Performance %"].apply(lambda x: f"{x:+.0f}%")
 
 # -------------------------------------------------------------------
-# KPIs
+# KPIs – split into Buys vs Sales so averages are comparable
 # -------------------------------------------------------------------
-k1, k2, k3, k4, k5, k6 = st.columns(6)
-k1.metric("Trades shown", f"{len(plot_data):,}")
-if len(plot_data):
-    k2.metric("Mean", f"{plot_data['Performance %'].mean():+.0f}%")
-    k3.metric("Median", f"{plot_data['Performance %'].median():+.0f}%")
-    k4.metric("% positive", f"{(plot_data['Performance %'] > 0).mean()*100:.0f}%")
-    k5.metric("Best", f"{plot_data['Performance %'].max():+.0f}%")
-    k6.metric("Worst", f"{plot_data['Performance %'].min():+.0f}%")
-else:
-    for k in (k2, k3, k4, k5, k6):
-        k.metric("—", "—")
+buy_data = plot_data[~plot_data["Transaction Type"].isin(SALE_TYPES)]
+sale_data = plot_data[plot_data["Transaction Type"].isin(SALE_TYPES)]
+
+def _kpi_row(df: pd.DataFrame, label: str, n_total: int):
+    st.markdown(f"**{label}** — {n_total} trade{'s' if n_total != 1 else ''}")
+    c1, c2, c3, c4, c5 = st.columns(5)
+    if len(df):
+        c1.metric("Mean", f"{df['Performance %'].mean():+.0f}%")
+        c2.metric("Median", f"{df['Performance %'].median():+.0f}%")
+        c3.metric("% positive", f"{(df['Performance %'] > 0).mean()*100:.0f}%")
+        c4.metric("Best", f"{df['Performance %'].max():+.0f}%")
+        c5.metric("Worst", f"{df['Performance %'].min():+.0f}%")
+    else:
+        for c in (c1, c2, c3, c4, c5):
+            c.metric("—", "—")
+
+_kpi_row(buy_data, "🟢 Buys (New Buy + Addition)", len(buy_data))
+_kpi_row(sale_data, "🔴 Sales (Partial + Complete)", len(sale_data))
 
 # -------------------------------------------------------------------
 # Scatter plot
