@@ -19,11 +19,19 @@ from pathlib import Path
 import pandas as pd
 
 
-# Alias map: Current-Portfolio name → name used in Trades & Performance sheets.
-# Add entries here whenever a company rebrands or relists. Matching is
-# case-insensitive on both sides.
+# Companies that have rebranded – renamed throughout the dashboard (trades,
+# prices, dropdown, chart, table, KPIs) to the new canonical name.
+RENAMES = {
+    "Beigene Ltd": "BeOne Medicines",
+}
+
+# Alias map: Current-Portfolio name → name used in Trades & Performance sheets
+# AFTER `RENAMES` has been applied. Add entries here when a company in the
+# current-portfolio sheet uses a different label from the trades sheet
+# (e.g. capitalisation differences or HK-line vs. parent-company naming).
+# Matching is case-insensitive on both sides.
 NAME_ALIASES = {
-    "beone medicines hk line": "Beigene Ltd",   # rebranded from BeiGene Aug-2025
+    "beone medicines hk line": "BeOne Medicines",
 }
 
 
@@ -46,6 +54,10 @@ def build_pickle(input_xlsx: str | Path, output_pkl: str | Path = "data.pkl") ->
     trades["Earliest Trade Date"] = pd.to_datetime(trades["Earliest Trade Date"])
     trades = trades.dropna(subset=["Earliest Trade Date", "Instrument Name"]).reset_index(drop=True)
 
+    # Apply rebrand renames to trade names
+    if RENAMES:
+        trades["Instrument Name"] = trades["Instrument Name"].replace(RENAMES)
+
     # --- build friendly-name mapping (column A ↔ price columns) ---------
     friendly_names = perf["Instrument Name"].dropna().tolist()
     price_cols = perf.columns[3:].tolist()
@@ -65,6 +77,10 @@ def build_pickle(input_xlsx: str | Path, output_pkl: str | Path = "data.pkl") ->
     # Reverse mapping for column rename
     col_to_name = {v: k for k, v in name_to_col.items()}
     prices = raw.rename(columns=col_to_name)
+
+    # Apply rebrand renames to price columns
+    if RENAMES:
+        prices = prices.rename(columns=RENAMES)
 
     # Manual proxy: HK-listed Alibaba uses the ADR series
     proxy_target = "Alibaba Group Holding Sponsored ADR"
