@@ -23,9 +23,16 @@ def build_pickle(input_xlsx: str | Path, output_pkl: str | Path = "data.pkl") ->
     input_xlsx = Path(input_xlsx)
     output_pkl = Path(output_pkl)
 
-    # --- read both sheets ------------------------------------------------
+    # --- read sheets -----------------------------------------------------
     trades = pd.read_excel(input_xlsx, sheet_name="Trades")
     perf = pd.read_excel(input_xlsx, sheet_name="Performance")
+    try:
+        current_pf_raw = pd.read_excel(input_xlsx, sheet_name="Current Portfolio")
+        current_raw = current_pf_raw["Instrument Name"].dropna().unique().tolist()
+    except (ValueError, KeyError):
+        current_raw = []
+        print("⚠ No 'Current Portfolio' sheet found – the 'current portfolio only' "
+              "toggle in the dashboard will be disabled.")
 
     # --- tidy trades -----------------------------------------------------
     trades["Earliest Trade Date"] = pd.to_datetime(trades["Earliest Trade Date"])
@@ -67,16 +74,40 @@ def build_pickle(input_xlsx: str | Path, output_pkl: str | Path = "data.pkl") ->
     else:
         print("✓ Every trade has a matching price column.")
 
+    # --- current portfolio matching (case-insensitive) -------------------
+    # The Current Portfolio sheet sometimes uses slightly different
+    # capitalisation than the Trades sheet (e.g. "Adyen NV" vs "Adyen Nv").
+    # We resolve every current-portfolio name to its trade-sheet equivalent.
+    trade_names_lower = {n.lower(): n for n in trade_companies}
+    current_portfolio_names = set()
+    unmatched_current = []
+    for n in current_raw:
+        canonical = trade_names_lower.get(n.lower())
+        if canonical is not None:
+            current_portfolio_names.add(canonical)
+        else:
+            unmatched_current.append(n)
+
+    if current_raw:
+        print(f"✓ Current portfolio: {len(current_portfolio_names)}/{len(current_raw)} "
+              f"holdings have trade history.")
+        if unmatched_current:
+            print(f"  ({len(unmatched_current)} held but never traded in this dataset: "
+                  f"{unmatched_current})")
+
     # --- payload ---------------------------------------------------------
     payload = {
         "trades": trades,
         "prices": prices,
         "alibaba_hk_proxy": proxy_target,
+        "current_portfolio_names": sorted(current_portfolio_names),
+        "current_portfolio_raw": sorted(current_raw),
         "generated_at_utc": datetime.now(timezone.utc),
         "source_filename": input_xlsx.name,
         "n_trades": int(len(trades)),
         "n_companies": int(prices.shape[1]),
         "n_price_dates": int(len(prices)),
+        "n_current_holdings": int(len(current_raw)),
         "trade_date_range": (
             trades["Earliest Trade Date"].min().to_pydatetime(),
             trades["Earliest Trade Date"].max().to_pydatetime(),
@@ -85,7 +116,7 @@ def build_pickle(input_xlsx: str | Path, output_pkl: str | Path = "data.pkl") ->
             prices.index.min().to_pydatetime(),
             prices.index.max().to_pydatetime(),
         ),
-        "schema_version": 1,
+        "schema_version": 2,
     }
 
     with open(output_pkl, "wb") as f:
@@ -95,6 +126,7 @@ def build_pickle(input_xlsx: str | Path, output_pkl: str | Path = "data.pkl") ->
     print(f"\n✓ Wrote {output_pkl}  ({size_kb:,.0f} KB)")
     print(f"   Trades             : {payload['n_trades']:>6,}")
     print(f"   Companies          : {payload['n_companies']:>6,}")
+    print(f"   Current holdings   : {payload['n_current_holdings']:>6,}  ({len(current_portfolio_names)} matched to trades)")
     print(f"   Price-data rows    : {payload['n_price_dates']:>6,}")
     print(f"   Trade date range   : {payload['trade_date_range'][0].date()} → {payload['trade_date_range'][1].date()}")
     print(f"   Price date range   : {payload['price_date_range'][0].date()} → {payload['price_date_range'][1].date()}")

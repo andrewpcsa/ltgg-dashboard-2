@@ -169,6 +169,25 @@ st.markdown(sub)
 # Company search + dropdown (main panel, prominent)
 # -------------------------------------------------------------------
 all_companies = sorted(trades["Instrument Name"].unique().tolist())
+current_portfolio_names = set(data.get("current_portfolio_names", []))
+n_current = data.get("n_current_holdings", 0)
+
+# Toggle: restrict to current holdings only
+if current_portfolio_names:
+    current_only = st.toggle(
+        f"📌 Current portfolio only ({n_current} holdings)",
+        value=False,
+        help="Show only companies currently held in the LTGG portfolio. "
+             f"{len(current_portfolio_names)} of {n_current} holdings have trade history; "
+             "any held but never-traded names are excluded as there's nothing to plot for them.",
+    )
+else:
+    current_only = False
+
+available_companies = (
+    sorted(c for c in all_companies if c in current_portfolio_names)
+    if current_only else all_companies
+)
 
 c_search, c_pick = st.columns([1, 2])
 with c_search:
@@ -178,9 +197,9 @@ with c_search:
     )
 with c_pick:
     if company_search:
-        matching = [c for c in all_companies if company_search.lower() in c.lower()]
+        matching = [c for c in available_companies if company_search.lower() in c.lower()]
     else:
-        matching = all_companies
+        matching = available_companies
     selected_companies = st.multiselect(
         f"Companies on chart ({len(matching)} match{'es' if len(matching) != 1 else ''})",
         options=matching,
@@ -222,51 +241,18 @@ plot_data["Signed Weight"] = np.where(
     -plot_data["% Portfolio Order"],
     plot_data["% Portfolio Order"],
 )
-plot_data["Perf Display"] = plot_data["Performance %"].apply(lambda x: f"{x:+.0f}%")
-
-# -------------------------------------------------------------------
-# KPI styling
-# -------------------------------------------------------------------
-st.markdown("""
-<style>
-/* Shrink KPI labels */
-div[data-testid="stMetricLabel"] > label {
-    font-size: 0.85rem !important;
-}
-
-/* Shrink KPI values */
-div[data-testid="stMetricValue"] {
-    font-size: 1.7rem !important;
-}
-
-div[data-testid="stMetricValue"] > div {
-    font-size: inherit !important;
-}
-
-/* Reduce vertical padding around metrics */
-div[data-testid="stMetric"] {
-    padding-top: 0rem;
-    padding-bottom: 0rem;
-}
-</style>
-""", unsafe_allow_html=True)
-
 
 # -------------------------------------------------------------------
 # KPIs
 # -------------------------------------------------------------------
-k1, k2, k3, k4, k5 = st.columns(5, gap="xxsmall")
-
+k1, k2, k3, k4, k5 = st.columns(5)
 k1.metric("Trades shown", f"{len(plot_data):,}")
-
 if len(plot_data):
-    k2.metric("Mean", f"{plot_data['Performance %'].mean():+.0f}%")
-    k3.metric("Median", f"{plot_data['Performance %'].median():+.0f}%")
+    k2.metric("Mean", f"{plot_data['Performance %'].mean():+.1f}%")
+    k3.metric("Median", f"{plot_data['Performance %'].median():+.1f}%")
     k4.metric("% positive", f"{(plot_data['Performance %'] > 0).mean()*100:.0f}%")
-    k5.metric(
-        "Best / worst",
-        f"{plot_data['Performance %'].max():+.0f}% / {plot_data['Performance %'].min():+.0f}%"
-    )
+    k5.metric("Best / worst",
+              f"{plot_data['Performance %'].max():+.0f}% / {plot_data['Performance %'].min():+.0f}%")
 else:
     for k in (k2, k3, k4, k5):
         k.metric("—", "—")
@@ -292,7 +278,7 @@ else:
         color_discrete_map=COLOR_MAP,
         category_orders={"Transaction Type": ["New Buy", "Addition", "Partial Sale", "Complete Sale"]},
         custom_data=["Instrument Name", "Earliest Trade Date",
-                     "Transaction Type", "% Portfolio Order", "Perf Display"],
+                     "Transaction Type", "% Portfolio Order", "Performance %"],
     )
     fig.update_traces(
         marker=dict(size=11, opacity=0.78,
@@ -302,7 +288,7 @@ else:
             "Date: %{customdata[1]|%d %b %Y}<br>"
             "Type: %{customdata[2]}<br>"
             "Trade weight: %{customdata[3]:.2f}%<br>"
-            "Performance: %{customdata[4]}"
+            "Performance: %{customdata[4]:+.0f}%"
             "<extra></extra>"
         ),
     )
@@ -335,11 +321,14 @@ else:
         xaxis_title="Trade weight (% of portfolio) — buys positive, sales negative",
         yaxis_title="Performance (%)" + (" – clipped" if clip_outliers else ""),
         yaxis=dict(tickformat=".0f", hoverformat=".0f"),
+        xaxis=dict(tickformat=".2f", hoverformat=".2f"),
         legend=dict(orientation="h", yanchor="bottom", y=1.02,
                     xanchor="right", x=1, title=None),
         margin=dict(l=10, r=10, t=40, b=10),
         plot_bgcolor="rgba(0,0,0,0)",
     )
+    fig.update_xaxes(showgrid=True, gridcolor="rgba(128,128,128,0.18)", zeroline=False)
+    fig.update_yaxes(showgrid=True, gridcolor="rgba(128,128,128,0.18)", zeroline=False)
 
     if log_y:
         fig.update_yaxes(type="log")
