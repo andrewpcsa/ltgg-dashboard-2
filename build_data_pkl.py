@@ -19,19 +19,27 @@ from pathlib import Path
 import pandas as pd
 
 
-# Companies that have rebranded – renamed throughout the dashboard (trades,
+# Companies that have rebranded - renamed throughout the dashboard (trades,
 # prices, dropdown, chart, table, KPIs) to the new canonical name.
+BEONE_CANONICAL_NAME = "BeOne Medicine"
+
 RENAMES = {
-    "Beigene Ltd": "BeOne Medicines",
+    "Beigene Ltd": BEONE_CANONICAL_NAME,
+    "BeiGene Ltd": BEONE_CANONICAL_NAME,
+    "BeOne Medicines": BEONE_CANONICAL_NAME,
+    "Beone Medicines": BEONE_CANONICAL_NAME,
 }
 
-# Alias map: Current-Portfolio name → name used in Trades & Performance sheets
+# Alias map: Current-Portfolio name -> name used in Trades & Performance sheets
 # AFTER `RENAMES` has been applied. Add entries here when a company in the
 # current-portfolio sheet uses a different label from the trades sheet
 # (e.g. capitalisation differences or HK-line vs. parent-company naming).
 # Matching is case-insensitive on both sides.
 NAME_ALIASES = {
-    "beone medicines hk line": "BeOne Medicines",
+    "beone medicines hk line": BEONE_CANONICAL_NAME,
+    "beone medicine hk line": BEONE_CANONICAL_NAME,
+    "beigene ltd": BEONE_CANONICAL_NAME,
+    "beigene": BEONE_CANONICAL_NAME,
 }
 
 
@@ -59,7 +67,7 @@ def build_pickle(input_xlsx: str | Path, output_pkl: str | Path = "data.pkl") ->
         trades["Instrument Name"] = trades["Instrument Name"].replace(RENAMES)
 
     # --- build friendly-name mapping (column A ↔ price columns) ---------
-    friendly_names = perf["Instrument Name"].dropna().tolist()
+    friendly_names = perf["Instrument Name"].dropna().replace(RENAMES).tolist()
     price_cols = perf.columns[3:].tolist()
 
     if len(friendly_names) != len(price_cols):
