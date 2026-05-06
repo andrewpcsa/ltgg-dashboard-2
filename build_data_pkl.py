@@ -19,6 +19,14 @@ from pathlib import Path
 import pandas as pd
 
 
+# Alias map: Current-Portfolio name → name used in Trades & Performance sheets.
+# Add entries here whenever a company rebrands or relists. Matching is
+# case-insensitive on both sides.
+NAME_ALIASES = {
+    "beone medicines hk line": "Beigene Ltd",   # rebranded from BeiGene Aug-2025
+}
+
+
 def build_pickle(input_xlsx: str | Path, output_pkl: str | Path = "data.pkl") -> dict:
     input_xlsx = Path(input_xlsx)
     output_pkl = Path(output_pkl)
@@ -74,15 +82,22 @@ def build_pickle(input_xlsx: str | Path, output_pkl: str | Path = "data.pkl") ->
     else:
         print("✓ Every trade has a matching price column.")
 
-    # --- current portfolio matching (case-insensitive) -------------------
+    # --- current portfolio matching (case-insensitive + alias map) -------
     # The Current Portfolio sheet sometimes uses slightly different
-    # capitalisation than the Trades sheet (e.g. "Adyen NV" vs "Adyen Nv").
-    # We resolve every current-portfolio name to its trade-sheet equivalent.
+    # capitalisation (e.g. "Adyen NV" vs "Adyen Nv") or a renamed company
+    # (e.g. "Beone Medicines HK Line" → previously traded as "Beigene Ltd").
+    # Resolve every current-portfolio name to its trade-sheet equivalent.
     trade_names_lower = {n.lower(): n for n in trade_companies}
     current_portfolio_names = set()
     unmatched_current = []
     for n in current_raw:
-        canonical = trade_names_lower.get(n.lower())
+        key = n.lower()
+        # First check the alias map for explicit name changes
+        aliased = NAME_ALIASES.get(key)
+        if aliased is not None:
+            canonical = trade_names_lower.get(aliased.lower())
+        else:
+            canonical = trade_names_lower.get(key)
         if canonical is not None:
             current_portfolio_names.add(canonical)
         else:
